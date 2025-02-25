@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const WebsiteContentSchema = new mongoose.Schema({
+  name: { type: String, required: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   subdomain: {
     type: mongoose.Schema.Types.ObjectId,
@@ -9,7 +10,7 @@ const WebsiteContentSchema = new mongoose.Schema({
   },
   template: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Template",
+    ref: "AdminTemplate",
     required: true,
   },
   content: { type: mongoose.Schema.Types.Mixed, required: true },
