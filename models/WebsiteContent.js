@@ -3,11 +3,7 @@ import mongoose from "mongoose";
 const WebsiteContentSchema = new mongoose.Schema({
   name: { type: String, required: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  subdomain: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Subdomain",
-    required: true,
-  },
+  subdomain: { type: String, required: true, unique: true }, // Store subdomain directly
   template: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "AdminTemplate",

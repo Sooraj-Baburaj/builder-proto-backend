@@ -9,6 +9,6 @@ const router = express.Router();
 
 // Protected routes
 router.post("/create", isAuthenticated, createWebsite);
-router.get("/:id", isAuthenticated, getWebsiteContent);
+router.get("/:subdomain", isAuthenticated, getWebsiteContent);
 
 export default router;

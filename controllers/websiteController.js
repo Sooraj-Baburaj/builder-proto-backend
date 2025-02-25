@@ -5,11 +5,9 @@ import {
 } from "@aws-sdk/client-route-53";
 import dotenv from "dotenv";
 dotenv.config();
-import Subdomain from "../models/Subdomain.js";
 import WebsiteContent from "../models/WebsiteContent.js";
 import AdminTemplate from "../models/AdminTemplate.js";
 import { toUrlFriendly } from "../utils/functions/url.js";
-import mongoose from "mongoose";
 
 const amplifyClient = new AmplifyClient({
   credentials: {
@@ -46,8 +44,8 @@ export const createWebsite = async (req, res) => {
 
     const subdomain = subdomainFromBody || toUrlFriendly(name);
 
-    const existingSubdomain = await Subdomain.findOne({ subdomain });
-    if (existingSubdomain) {
+    const existingWebsite = await WebsiteContent.findOne({ subdomain });
+    if (existingWebsite) {
       return res.status(400).json({ error: "Subdomain already exists" });
     }
 
@@ -95,16 +93,10 @@ export const createWebsite = async (req, res) => {
     const route53Command = new ChangeResourceRecordSetsCommand(route53Params);
     const route53Response = await route53Client.send(route53Command);
 
-    const newSubdomain = await Subdomain.create({
-      user: userId,
-      template: template._id,
-      subdomain,
-    });
-
     const websiteContent = await WebsiteContent.create({
       name,
       user: userId,
-      subdomain: newSubdomain._id,
+      subdomain,
       template: template._id,
       content: template.structure,
     });
@@ -134,17 +126,14 @@ export const createWebsite = async (req, res) => {
 };
 
 export const getWebsiteContent = async (req, res) => {
-  const { id } = req.params;
+  const { subdomain } = req.params;
 
   try {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "Invalid WebsiteContent ID" });
+    if (!subdomain) {
+      return res.status(400).json({ error: "Subdomain is required" });
     }
 
-    const websiteContent = await WebsiteContent.findById(id)
-      .populate("user", "username email")
-      .populate("subdomain", "subdomain")
-      .populate("template", "name amplifyAppId");
+    const websiteContent = await WebsiteContent.findOne({ subdomain });
 
     if (!websiteContent) {
       return res.status(404).json({ error: "Website content not found" });
