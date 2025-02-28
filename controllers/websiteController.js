@@ -29,7 +29,7 @@ const DOMAIN_NAME = process.env.AWS_ROUTE_53_HOSTED_DOMAIN;
 const HOSTED_ZONE_ID = process.env.AWS_ROUTE_53_HOSTED_ZONE_ID;
 
 export const createWebsite = async (req, res) => {
-  const { amplifyApp, subdomain: subdomainFromBody, name } = req.body;
+  const { amplifyApp, subdomain: subdomainFromBody, name, content } = req.body;
   const userId = req.user.id;
 
   try {
@@ -98,7 +98,7 @@ export const createWebsite = async (req, res) => {
       user: userId,
       subdomain,
       template: template._id,
-      content: template.structure,
+      content: content || template.structure,
     });
 
     res.json({
