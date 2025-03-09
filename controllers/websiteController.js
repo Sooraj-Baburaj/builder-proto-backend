@@ -87,7 +87,7 @@ export const createWebsite = async (req, res) => {
     });
 
     res.json({
-      message: `Website created at ${fullDomain}`,
+      domain: fullDomain,
       data: {
         websiteContent: websiteContent,
         amplifyDomainTarget: amplifyDefaultDomain,
