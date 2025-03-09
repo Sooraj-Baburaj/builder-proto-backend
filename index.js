@@ -2,6 +2,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cors from "cors"; // Import the cors package
 import userRoutes from "./routes/userRoutes.js";
 import websiteRoutes from "./routes/websiteRoutes.js";
 import adminRoutes from "./routes/admin/index.js";
@@ -9,7 +10,12 @@ import adminRoutes from "./routes/admin/index.js";
 dotenv.config();
 
 const app = express();
+app.use(cors()); // Use the cors middleware
 app.use(express.json());
+
+app.get("/api/healthcheck", (req, res) => {
+  res.status(200).json({ status: "ok", message: "Server is running" });
+});
 
 mongoose
   .connect(process.env.MONGO_URI)

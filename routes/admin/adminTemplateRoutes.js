@@ -9,12 +9,9 @@ import { isAdmin } from "../../middlewares/adminMiddleware.js";
 
 const router = express.Router();
 
-// All routes require admin authentication
-router.use(isAdmin);
-
-router.post("/", createTemplate);
-router.put("/:templateId", updateTemplate);
-router.delete("/:templateId", deleteTemplate);
+router.post("/", isAdmin, createTemplate);
+router.put("/:templateId", isAdmin, updateTemplate);
+router.delete("/:templateId", isAdmin, deleteTemplate);
 router.get("/", getAllTemplates);
 
 export default router;

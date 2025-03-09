@@ -1,8 +1,5 @@
 import { AmplifyClient, GetAppCommand } from "@aws-sdk/client-amplify";
-import {
-  Route53Client,
-  ChangeResourceRecordSetsCommand,
-} from "@aws-sdk/client-route-53";
+import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import dotenv from "dotenv";
 dotenv.config();
 import WebsiteContent from "../models/WebsiteContent.js";
@@ -17,16 +14,17 @@ const amplifyClient = new AmplifyClient({
   region: process.env.AWS_REGION,
 });
 
-const route53Client = new Route53Client({
+const dynamoDBClient = new DynamoDBClient({
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-  region: process.env.AWS_REGION,
+  region: "us-east-1", //dynamo location for subdomain mapping is different
 });
 
 const DOMAIN_NAME = process.env.AWS_ROUTE_53_HOSTED_DOMAIN;
-const HOSTED_ZONE_ID = process.env.AWS_ROUTE_53_HOSTED_ZONE_ID;
+const DYNAMODB_TABLE_NAME =
+  process.env.DYNAMODB_TABLE_NAME || "SubdomainMappings";
 
 export const createWebsite = async (req, res) => {
   const { amplifyApp, subdomain: subdomainFromBody, name, content } = req.body;
@@ -60,7 +58,7 @@ export const createWebsite = async (req, res) => {
 
     const getAppCommand = new GetAppCommand({ appId: amplifyApp });
     const appDetails = await amplifyClient.send(getAppCommand);
-    const amplifyDefaultDomain = appDetails.app.defaultDomain;
+    const amplifyDefaultDomain = `${appDetails.app.productionBranch.branchName}.${appDetails.app.defaultDomain}`;
 
     if (!amplifyDefaultDomain) {
       return res.status(400).json({
@@ -68,30 +66,17 @@ export const createWebsite = async (req, res) => {
       });
     }
 
-    const route53Params = {
-      HostedZoneId: HOSTED_ZONE_ID,
-      ChangeBatch: {
-        Changes: [
-          {
-            Action: "UPSERT",
-            ResourceRecordSet: {
-              Name: fullDomain,
-              Type: "CNAME",
-              TTL: 300,
-              ResourceRecords: [
-                {
-                  Value: amplifyDefaultDomain,
-                },
-              ],
-            },
-          },
-        ],
-        Comment: `Added subdomain ${subdomain} via API for user ${userId}`,
+    // Save to DynamoDB
+    const dynamoParams = {
+      TableName: DYNAMODB_TABLE_NAME,
+      Item: {
+        subdomain: { S: subdomain },
+        amplifyUrl: { S: amplifyDefaultDomain },
       },
     };
 
-    const route53Command = new ChangeResourceRecordSetsCommand(route53Params);
-    const route53Response = await route53Client.send(route53Command);
+    const dynamoCommand = new PutItemCommand(dynamoParams);
+    await dynamoDBClient.send(dynamoCommand);
 
     const websiteContent = await WebsiteContent.create({
       name,
@@ -106,21 +91,10 @@ export const createWebsite = async (req, res) => {
       data: {
         websiteContent: websiteContent,
         amplifyDomainTarget: amplifyDefaultDomain,
-        route53ChangeId: route53Response.ChangeInfo.Id,
-        status: route53Response.ChangeInfo.Status,
       },
     });
   } catch (error) {
     console.error("Error creating website:", error);
-    if (
-      error.name === "InvalidChangeBatch" ||
-      error.name === "BadRequestException"
-    ) {
-      return res.status(400).json({
-        error: "Invalid subdomain configuration",
-        details: error.message,
-      });
-    }
     res.status(500).json({ error: error.message });
   }
 };
